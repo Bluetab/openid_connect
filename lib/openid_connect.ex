@@ -138,6 +138,7 @@ defmodule OpenIDConnect do
         params
       )
       |> Map.to_list()
+      |> Enum.reject(fn {_, v} -> is_nil(v) end)
 
     headers = [{"Content-Type", "application/x-www-form-urlencoded"}]
 

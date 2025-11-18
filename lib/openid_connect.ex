@@ -141,9 +141,10 @@ defmodule OpenIDConnect do
       |> Enum.reject(fn {_, v} -> is_nil(v) end)
 
     headers = [{"Content-Type", "application/x-www-form-urlencoded"}]
+    opts = request_opts()
 
     with {:ok, %HTTPoison.Response{status_code: status_code} = resp} when status_code in 200..299 <-
-           http_client().post(uri, {:form, form_body}, headers),
+           http_client().post(uri, {:form, form_body}, headers, opts),
          {:ok, json} <- Jason.decode(resp.body),
          {:ok, json} <- assert_json(json) do
       {:ok, json}
@@ -342,8 +343,10 @@ defmodule OpenIDConnect do
   end
 
   defp fetch_resource(uri) do
+    opts = request_opts()
+
     with {:ok, %HTTPoison.Response{status_code: status_code} = resp} when status_code in 200..299 <-
-           http_client().get(uri),
+           http_client().get(uri, [], opts),
          {:ok, json} <- Jason.decode(resp.body),
          {:ok, json} <- assert_json(json) do
       {:ok, json, remaining_lifetime(resp.headers)}
@@ -398,5 +401,12 @@ defmodule OpenIDConnect do
 
   defp http_client do
     Application.get_env(:openid_connect, :http_client, HTTPoison)
+  end
+
+  defp request_opts do
+    case Application.get_env(:openid_connect, :ssl_options, []) do
+      [] -> []
+      ssl_options -> [ssl: ssl_options]
+    end
   end
 end

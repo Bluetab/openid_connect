@@ -1,10 +1,10 @@
 # CHANGELOG
 
-## [Unreleased]
+## [8.8.0] 2026-06-29
 
 ### Fixed
 
-- [TD-8299] Vulnerabilities in hackney and jose dependencies
+-[TD-8299] Vulnerabilities
 
 ## v0.1.2
 * Optional params for `authorization_uri`

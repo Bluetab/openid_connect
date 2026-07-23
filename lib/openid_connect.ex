@@ -107,24 +107,40 @@ defmodule OpenIDConnect do
     build_uri(uri, params)
   end
 
-  @spec fetch_tokens(provider, code, name) :: success(map) | error(:fetch_tokens)
+  @spec fetch_tokens(provider, params | code, name) :: success(map) | error(:fetch_tokens)
   @doc """
   Fetches the authentication tokens from the provider
 
-  The `code` paramater should be taken from the query param `code` in the redirect
-  back to your application from the provider
+  The `params` map should include the query params returned by the provider during
+  authorization (at least `"code"`). It may also include `"code_verifier"` for PKCE.
   """
-  def fetch_tokens(provider, code, name \\ :openid_connect) do
+  def fetch_tokens(provider, params, name \\ :openid_connect)
+
+  def fetch_tokens(provider, code, name) when is_binary(code) do
+    IO.warn(
+      "Deprecation: `OpenIDConnect.fetch_tokens/3` no longer takes a binary as the 2nd argument. Please refer to the docs for the new API."
+    )
+
+    fetch_tokens(provider, %{code: code}, name)
+  end
+
+  def fetch_tokens(provider, params, name) when is_map(params) do
     uri = access_token_uri(provider, name)
     config = config(provider, name)
 
-    form_body = [
-      client_id: client_id(config),
-      client_secret: client_secret(config),
-      code: code,
-      grant_type: "authorization_code",
-      redirect_uri: redirect_uri(config)
-    ]
+    form_body =
+      Map.merge(
+        %{
+          client_id: client_id(config),
+          client_secret: client_secret(config),
+          grant_type: "authorization_code",
+          redirect_uri: redirect_uri(config)
+        },
+        params
+      )
+      |> Map.to_list()
+      |> Enum.reject(fn {_, value} -> is_nil(value) end)
+      |> Enum.sort_by(fn {key, _} -> to_string(key) end)
 
     headers = [{"Content-Type", "application/x-www-form-urlencoded"}]
 

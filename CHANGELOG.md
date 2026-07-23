@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [Unreleased]
+
+### Fixed
+
+- Restore `fetch_tokens/3` params map support so token requests send flat `code` and `code_verifier` form fields with HTTPoison 3
+
 ## [8.8.0] 2026-06-29
 
 ### Fixed

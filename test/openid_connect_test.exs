@@ -267,6 +267,49 @@ defmodule OpenIDConnectTest do
         GenServer.stop(pid)
       end
     end
+
+    test "builds flat form body from callback params with code_verifier" do
+      {:ok, pid} = GenServer.start_link(MockWorker, [], name: :openid_connect)
+
+      config = GenServer.call(:openid_connect, {:config, :google})
+
+      params = %{
+        "code" => "auth-code",
+        "code_verifier" => "pkce-verifier",
+        "state" => "security-state",
+        "session_state" => "session-state"
+      }
+
+      form_body = [
+        client_id: config[:client_id],
+        client_secret: config[:client_secret],
+        grant_type: "authorization_code",
+        redirect_uri: config[:redirect_uri],
+        code: "auth-code",
+        code_verifier: "pkce-verifier",
+        state: "security-state",
+        session_state: "session-state"
+      ]
+
+      try do
+        expect(HTTPClientMock, :post, fn "https://www.googleapis.com/oauth2/v4/token",
+                                         {:form, posted_form},
+                                         _headers ->
+          assert Enum.map(posted_form, fn {key, value} -> {to_string(key), value} end)
+                 |> Enum.sort() ==
+                   Enum.map(form_body, fn {key, value} -> {to_string(key), value} end)
+                   |> Enum.sort()
+
+          refute Enum.any?(posted_form, fn {key, _} -> to_string(key) =~ "code[" end)
+
+          {:ok, %HTTPoison.Response{status_code: 200, body: Jason.encode!(%{})}}
+        end)
+
+        assert {:ok, %{}} = OpenIDConnect.fetch_tokens(:google, params)
+      after
+        GenServer.stop(pid)
+      end
+    end
   end
 
   describe "jwt verification" do
